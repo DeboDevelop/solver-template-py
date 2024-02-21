@@ -54,7 +54,7 @@ class BatchAuction:
         # Store reference token and (previous) prices.
         self.ref_token = ref_token
         self.prices = (
-            prices if prices else {ref_token: self._tokens[ref_token].external_price}
+            prices if prices else {ref_token: self._tokens[ref_token].external_price * 10 ** self._tokens[ref_token].decimals }
         )
 
     @classmethod
@@ -159,7 +159,7 @@ class BatchAuction:
         for i in range(n - 1):
             for j in range(i + 1, n):
                 order1, order2 = orders[i], orders[j]
-                if order1.match_type(order2) == OrderMatchType.BOTH_FILLED:
+                if (not order1.is_executed() or not order2.is_executed) and order1.match_type(order2) == OrderMatchType.BOTH_FILLED:
                     order1.execute(
                         buy_amount_value=order2.sell_amount,
                         sell_amount_value=order2.buy_amount
