@@ -6,9 +6,10 @@ from __future__ import annotations
 import decimal
 import logging
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Optional, List
+from collections import defaultdict
 
-from src.models.order import Order, OrdersSerializedType
+from src.models.order import Order, OrderMatchType, OrdersSerializedType
 from src.models.token import (
     Token,
     TokenInfo,
@@ -54,7 +55,7 @@ class BatchAuction:
         # Store reference token and (previous) prices.
         self.ref_token = ref_token
         self.prices = (
-            prices if prices else {ref_token: self._tokens[ref_token].external_price}
+            prices if prices else {ref_token: self._tokens[ref_token].external_price * 10 ** self._tokens[ref_token].decimals }
         )
 
     @classmethod
@@ -154,6 +155,59 @@ class BatchAuction:
 
     def solve(self) -> None:
         """Solve Batch"""
+        orders = self.orders
+
+        # Old Solution as demonstrated in the video.
+        # n = len(orders)
+        # for i in range(n - 1):
+        #     for j in range(i + 1, n):
+        #         order1, order2 = orders[i], orders[j]
+        #         if (not order1.is_executed() or not order2.is_executed()) and order1.match_type(order2) == OrderMatchType.BOTH_FILLED:
+        #             order1.execute(
+        #                 buy_amount_value=order2.sell_amount,
+        #                 sell_amount_value=order2.buy_amount
+        #             )
+        #             order2.execute(
+        #                 buy_amount_value=order1.sell_amount,
+        #                 sell_amount_value=order1.buy_amount
+        #             )
+        #             # executedBuyAmount = executedSellAmount.mul(sellPrice).ceilDiv(buyPrice)
+        #             token_a = self.token_info(order1.sell_token)
+        #             token_b = self.token_info(order1.buy_token)
+        #             self.prices[token_a.token] = order2.sell_amount
+        #             self.prices[token_b.token] = order1.sell_amount
+        #             return
+
+        past_orders = defaultdict(lambda: defaultdict(list))
+        for i, order in enumerate(orders):
+            old_order: List[int] = past_orders[order.buy_token][order.sell_token]
+            order1: Order = order
+            match_index: Optional[int] = None
+            for j in old_order:
+                order2: Order = orders[j]
+                if (not order1.is_executed() or not order2.is_executed()) and order1.match_type(order2) == OrderMatchType.BOTH_FILLED:
+                    match_index = j
+                    order1.execute(
+                        buy_amount_value=order2.sell_amount,
+                        sell_amount_value=order2.buy_amount
+                    )
+                    order2.execute(
+                        buy_amount_value=order1.sell_amount,
+                        sell_amount_value=order1.buy_amount
+                    )
+                    # executedBuyAmount = executedSellAmount.mul(sellPrice).ceilDiv(buyPrice)
+                    token_a = self.token_info(order1.sell_token)
+                    token_b = self.token_info(order1.buy_token)
+                    self.prices[token_a.token] = order2.sell_amount
+                    self.prices[token_b.token] = order1.sell_amount
+            if match_index is None:
+                # Add order to the past order dict
+                past_orders[order.sell_token][order.buy_token].append(i)
+            else:
+                # Removed the matched order from old order list
+                del old_order[match_index]
+        return
+
 
     #################################
     #  SOLUTION PROCESSING METHODS  #

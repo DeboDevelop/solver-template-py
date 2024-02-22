@@ -19,6 +19,7 @@ from src.util.schema import (
     BatchAuctionModel,
     SettledBatchAuctionModel,
 )
+from src.util.numbers import decimal_to_str
 
 # Set decimal precision.
 decimal.getcontext().prec = 100
@@ -74,20 +75,31 @@ async def solve(problem: BatchAuctionModel, request: Request):  # type: ignore
     print("Parameters Supplied", solver_args)
 
     # 1. Solve BatchAuction: update batch_auction with
-    # batch.solve()
+    batch.solve()
 
-    trivial_solution = {
-        "orders": {},
+    # trivial_solution = {
+    #     "orders": {},
+    #     "foreign_liquidity_orders": [],
+    #     "amms": {},
+    #     "prices": {},
+    #     "approvals": [],
+    #     "interaction_data": [],
+    #     "score": "0",
+    # }
+
+
+    solution = {
+        "orders": { order.order_id: order.as_dict() for order in batch.orders if order.is_executed() },
         "foreign_liquidity_orders": [],
         "amms": {},
-        "prices": {},
+        "prices": { str(key): decimal_to_str(value) for key, value in batch.prices.items() },
         "approvals": [],
         "interaction_data": [],
         "score": "0",
     }
 
-    print("\n\n*************\n\nReturning solution: " + str(trivial_solution))
-    return trivial_solution
+    print("\n\n*************\n\nReturning solution: " + str(solution))
+    return solution
 
 
 # ++++ Server setup: ++++

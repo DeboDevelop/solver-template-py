@@ -35,6 +35,22 @@ or build your own docker image with
 docker build -t test-solver-image .
 ```
 
+# Dealing with Error:
+
+If you face this error:
+```
+File "/home/user/projects/solver-template-py/venv/lib64/python3.12/site-packages/pydantic/utils.py", line 256, in generate_model_signature
+    merged_params[param_name] = Parameter(
+                                ^^^^^^^^^^
+  File "/usr/lib64/python3.12/inspect.py", line 2768, in __init__
+    raise ValueError('{!r} is not a valid parameter name'.format(name))
+ValueError: 'not' is not a valid parameter name
+```
+Then either use `new_requirements.txt` to install dependencies or update the version of `pydantic` to `1.10.14` using the following commands:
+```sh
+pip install pydantic==1.10.14
+```
+
 # Feed an Auction Instance to the Solver
 
 ```shell
